@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRM Assistant - AI-Powered Sales Intelligence</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 1200px;
+            min-height: 80vh;
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            overflow: hidden;
+            animation: slideUp 0.6s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .sidebar {
+            background: linear-gradient(180deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 30px 20px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .sidebar::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 1px;
+            height: 100%;
+            background: linear-gradient(180deg, transparent, rgba(255,255,255,0.1), transparent);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            margin-bottom: 40px;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .logo::before {
+            content: '🤖';
+            font-size: 32px;
+            margin-right: 12px;
+        }
+
+        .tools-list {
+            flex-grow: 1;
+        }
+
+        .tool-category {
+            margin-bottom: 25px;
+        }
+
+        .category-title {
+            font-size: 14px;
+            font-weight: 600;
+            opacity: 0.7;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .tool-item {
+            padding: 12px 16px;
+            margin: 5px 0;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            font-size: 14px;
+        }
+
+        .tool-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(5px);
+        }
+
+        .tool-item.active {
+            background: rgba(52, 152, 219, 0.3);
+            border-left: 3px solid #3498db;
+        }
+
+        .tool-item::before {
+            margin-right: 10px;
+            font-size: 16px;
+        }
+
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .header {
+            background: white;
+            padding: 25px 30px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            font-size: 28px;
+            font-weight: 300;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            color: #27ae60;
+            font-size: 14px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: #27ae60;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .chat-container {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 30px;
+            overflow: hidden;
+        }
+
+        .messages {
+            flex-grow: 1;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            padding-right: 10px;
+        }
+
+        .message {
+            margin-bottom: 20px;
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .user-message {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .user-bubble {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 20px 20px 5px 20px;
+            max-width: 70%;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .assistant-message {
+            display: flex;
+            align-items: flex-start;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #3498db, #2ecc71);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .assistant-bubble {
+            background: white;
+            border: 1px solid #e9ecef;
+            padding: 20px;
+            border-radius: 5px 20px 20px 20px;
+            max-width: 75%;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .result-card {
+            background: #f8f9fa;
+            border-left: 4px solid #3498db;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .result-title {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+        }
+
+        .result-content {
+            color: #5a6c7d;
+            line-height: 1.6;
+        }
+
+        .input-container {
+            display: flex;
+            gap: 15px;
+            align-items: flex-end;
+        }
+
+        .input-wrapper {
+            flex-grow: 1;
+            position: relative;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 15px 20px;
+            border: 2px solid #e9ecef;
+            border-radius: 25px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            resize: none;
+            min-height: 50px;
+            max-height: 120px;
+            font-family: inherit;
+            overflow-y: hidden;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .send-button {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+        }
+
+        .send-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .send-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #6c757d;
+            font-style: italic;
+        }
+
+        .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid #e9ecef;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .quick-actions {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .quick-action {
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.3s ease;
+        }
+
+        .quick-action:hover {
+            background: rgba(102, 126, 234, 0.2);
+            transform: translateY(-1px);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto 1fr;
+                max-width: 100%;
+                margin: 10px;
+                min-height: calc(100vh - 20px);
+            }
+
+            .sidebar {
+                padding: 20px;
+                border-radius: 20px 20px 0 0;
+            }
+
+            .tools-list {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <div class="logo">CRM Assistant</div>
+        </div>
+
+        <div class="main-content">
+            <div class="header">
+                <h1>AI Sales Intelligence</h1>
+                <div class="status-indicator">
+                    <div class="status-dot"></div>
+                    System Ready
+                </div>
+            </div>
+
+            <div class="chat-container">
+                <div class="messages" id="messages">
+                    <div class="message assistant-message">
+                        <div class="avatar">🤖</div>
+                        <div class="assistant-bubble">
+                            <div class="result-card">
+                                <div class="result-title">Welcome to CRM Assistant!</div>
+                                <div class="result-content">
+                                    I'm here to help you with lead qualification, follow-ups, quotations, pipeline management, and sales coaching. 
+                                    Ask me anything or use the quick actions below to get started.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="quick-actions">
+                    <div class="quick-action" onclick="useQuickAction('Qualify a new lead with deal size $50000, high urgency, positive past behavior')">
+                        Quick Lead Scoring
+                    </div>
+                    <div class="quick-action" onclick="useQuickAction('Generate follow-up for site visit with customer John Smith')">
+                        Site Visit Follow-up
+                    </div>
+                    <div class="quick-action" onclick="useQuickAction('Create quotation for VIP customer, deal size $25000, high urgency')">
+                        VIP Quotation
+                    </div>
+                    <div class="quick-action" onclick="useQuickAction('Analyze pipeline for deal in negotiation stage, 10 days inactive')">
+                        Pipeline Analysis
+                    </div>
+                </div>
+
+                <div class="input-container">
+                    <div class="input-wrapper">
+                        <textarea 
+                            id="userInput" 
+                            class="input-field" 
+                            placeholder="Ask me about leads, quotations, follow-ups, or sales strategy..."
+                            rows="1"
+                            onkeypress="handleKeyPress(event)"
+                        ></textarea>
+                    </div>
+                    <button class="send-button" onclick="sendMessage()" id="sendButton">
+                        ➤
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isLoading = false;
+
+        function selectTool(toolName) {
+            document.querySelectorAll('.tool-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.target.classList.add('active');
+        }
+
+        function useQuickAction(message) {
+            document.getElementById('userInput').value = message;
+            sendMessage();
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+
+        function sendMessage() {
+            if (isLoading) return;
+            
+            const input = document.getElementById('userInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            addMessage('user', message);
+            input.value = '';
+            
+            showLoading();
+            
+            // Simulate API call
+            setTimeout(() => {
+                hideLoading();
+                simulateResponse(message);
+            }, 2000);
+        }
+
+        function addMessage(type, content, resultData = null) {
+            const messagesContainer = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}-message`;
+            
+            if (type === 'user') {
+                messageDiv.innerHTML = `
+                    <div class="user-bubble">${content}</div>
+                `;
+            } else {
+                let resultContent = '';
+                if (resultData) {
+                    resultContent = `
+                        <div class="result-card">
+                            <div class="result-title">📌 ${resultData.topic}</div>
+                            <div class="result-content">${resultData.summary.replace(/\n/g, '<br>')}</div>
+                        </div>
+                        ${resultData.tools_used.length > 0 ? `
+                        <div class="result-card" style="margin-top: 10px; border-left-color: #27ae60;">
+                            <div class="result-title">🛠️ Tools Used</div>
+                            <div class="result-content">${resultData.tools_used.join(', ')}</div>
+                        </div>
+                        ` : ''}
+                    `;
+                } else {
+                    resultContent = `<div class="result-content">${content}</div>`;
+                }
+                
+                messageDiv.innerHTML = `
+                    <div class="avatar">🤖</div>
+                    <div class="assistant-bubble">
+                        ${resultContent}
+                    </div>
+                `;
+            }
+            
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function showLoading() {
+            isLoading = true;
+            const sendButton = document.getElementById('sendButton');
+            sendButton.disabled = true;
+            sendButton.innerHTML = '<div class="spinner"></div>';
+            
+            const messagesContainer = document.getElementById('messages');
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'message assistant-message';
+            loadingDiv.id = 'loading-message';
+            loadingDiv.innerHTML = `
+                <div class="avatar">🤖</div>
+                <div class="assistant-bubble">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        Processing your request...
+                    </div>
+                </div>
+            `;
+            messagesContainer.appendChild(loadingDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function hideLoading() {
+            isLoading = false;
+            const sendButton = document.getElementById('sendButton');
+            sendButton.disabled = false;
+            sendButton.innerHTML = '➤';
+            
+            const loadingMessage = document.getElementById('loading-message');
+            if (loadingMessage) {
+                loadingMessage.remove();
+            }
+        }
+
+        function simulateResponse(message) {
+            fetch('/api/ask', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: message })
+            })
+            .then(response => response.json())
+            .then(data => {
+                addMessage('assistant', '', data);
+            })
+            .catch(error => {
+                addMessage('assistant', 'Sorry, there was an error connecting to the assistant.');
+            });
+        }
+
+        // Auto-resize textarea
+        document.getElementById('userInput').addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+        });
+    </script>
+</body>
+</html>
