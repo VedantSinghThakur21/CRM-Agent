@@ -9,12 +9,18 @@ from config import Config
 
 # --- Utility Tools ---
 
-def save_to_txt(data: str, filename: str = "research_output.txt") -> str:
+def save_to_txt(data: str, filename: str = "research_output.txt") -> dict:
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     formatted_text = f"--- Research Output ---\nTimestamp: {timestamp}\n\n{data}\n\n"
     with open(filename, "a", encoding="utf-8") as f:
         f.write(formatted_text)
-    return f"Data successfully saved to {filename}"
+    summary = f"Data successfully saved to {filename} at {timestamp}."
+    return {
+        "summary": summary,
+        "topic": "Save Data",
+        "tools_used": ["save_text_to_file"],
+        "source": [filename]
+    }
 
 save_tool = Tool(
     name="save_text_to_file",
@@ -34,9 +40,13 @@ def search_summary(query: str) -> dict:
         summary = "\n".join(str(item) for item in result)
     else:
         summary = str(result)
-    # Truncate to 1000 characters for safety
     summary = summary[:1000]
-    return {"summary": summary}
+    return {
+        "summary": f"### Web Search Results for '{query}':\n{summary}",
+        "topic": "Web Search",
+        "tools_used": ["web_search"],
+        "source": []
+    }
 
 search_tool = Tool(
     name="web_search",
@@ -44,17 +54,28 @@ search_tool = Tool(
     description=(
         "Search the web for information using DuckDuckGo. "
         "Input: a string with the search query. "
-        "Returns a dictionary with a single key 'summary' containing a string summary of the search results. "
-        "Always return the value of the 'summary' key from the tool output as the response, even if it is raw or unformatted."
+        "Returns a dictionary with a detailed summary of the search results."
     )
 )
 
 api_wrapper = WikipediaAPIWrapper(top_k_results=1, doc_content_chars_max=2000)
-wiki_tool = WikipediaQueryRun(api_wrapper=api_wrapper)
-wiki_tool.description = (
-    "Search Wikipedia for factual information. "
-    "Input: a string with the topic to look up. "
-    "Returns a summary from Wikipedia."
+def wiki_summary(query: str) -> dict:
+    result = wiki_tool.run(query)
+    return {
+        "summary": f"### Wikipedia Summary for '{query}':\n{result}",
+        "topic": "Wikipedia Search",
+        "tools_used": ["wikipedia"],
+        "source": []
+    }
+
+wiki_tool = Tool(
+    name="wikipedia",
+    func=wiki_summary,
+    description=(
+        "Search Wikipedia for factual information. "
+        "Input: a string with the topic to look up. "
+        "Returns a summary from Wikipedia."
+    )
 )
 
 # --- CRM/Agentic Tools ---
@@ -123,25 +144,22 @@ def lead_qualifier_tool(lead_info: Dict[str, Any]) -> Dict[str, Any]:
     }
     
     summary = (
-        f"Lead Qualification Results:\n"
-        f"Score: {score}/100\n"
-        f"Segment: {segment.capitalize()}\n"
-        f"Priority: {priority.capitalize()}\n\n"
-        f"Analysis:\n"
+        f"### Lead Qualification Results\n"
+        f"**Score:** {score}/100\n"
+        f"**Segment:** {segment.capitalize()} ({priority.capitalize()} Priority)\n\n"
+        f"**Analysis:**\n"
         f"- {analysis['deal_size_analysis']}\n"
         f"- Urgency: {analysis['urgency_level']}\n"
         f"- Historical Engagement: {analysis['historical_engagement']}\n\n"
-        f"Recommended Actions:\n"
+        f"**Recommended Actions:**\n"
         + "\n".join(f"- {action}" for action in recommended_actions)
     )
     
     return {
-        "score": score,
-        "segment": segment,
-        "priority": priority,
-        "analysis": analysis,
-        "recommended_actions": recommended_actions,
-        "summary": summary
+        "summary": summary,
+        "topic": "Lead Qualification",
+        "tools_used": ["lead_qualifier"],
+        "source": []
     }
 
 lead_qualifier = Tool(
@@ -206,17 +224,18 @@ def followup_tool(args: Dict[str, Any]) -> Dict[str, Any]:
     next_followup = datetime.now() + timedelta(days=followup_content["delay_days"])
     
     summary = (
-        f"Follow-up Plan:\n"
-        f"Subject: {followup_content['subject']}\n"
-        f"Message:\n{followup_content['message']}\n\n"
-        f"Schedule for: {next_followup.strftime('%Y-%m-%d')}\n"
-        f"Delay: {followup_content['delay_days']} days"
+        f"### Follow-up Plan\n"
+        f"**Subject:** {followup_content['subject']}\n"
+        f"**Message:**\n{followup_content['message']}\n"
+        f"**Schedule for:** {next_followup.strftime('%Y-%m-%d')}\n"
+        f"**Delay:** {followup_content['delay_days']} days"
     )
     
     return {
-        "followup_content": followup_content,
-        "next_followup_date": next_followup.strftime("%Y-%m-%d"),
-        "summary": summary
+        "summary": summary,
+        "topic": "Follow-up",
+        "tools_used": ["followup"],
+        "source": []
     }
 
 followup = Tool(
@@ -258,7 +277,7 @@ def calculate_adjusted_price(base_price: float, deal_context: Dict[str, Any]) ->
 
 def quotation_tool(deal_context: Dict[str, Any]) -> Dict[str, Any]:
     """Enhanced quotation generation system with smart template selection and pricing."""
-    base_price = deal_context.get("base_price", 10000)
+    base_price = deal_context.get("base_price") or deal_context.get("deal_size") or 10000
     template_key = select_quotation_template(deal_context)
     template_config = Config.QUOTATION_SETTINGS["templates"][template_key]
     
@@ -284,22 +303,23 @@ def quotation_tool(deal_context: Dict[str, Any]) -> Dict[str, Any]:
         quotation_details["special_notes"].append("Premium support included")
     
     summary = (
-        f"Quotation Details:\n"
-        f"Template: {quotation_details['template_name']}\n"
-        f"Customer Type: {quotation_details['customer_type']}\n"
-        f"Base Price: ${quotation_details['base_price']:,.2f}\n"
-        f"Final Price: ${quotation_details['final_price']:,.2f}\n"
-        f"Terms: {quotation_details['terms']}\n"
-        f"Delivery: {quotation_details['delivery']}\n"
-        f"Validity: {quotation_details['validity']}\n"
+        f"### Quotation Details\n"
+        f"**Template:** {quotation_details['template_name']}\n"
+        f"**Customer Type:** {quotation_details['customer_type']}\n"
+        f"**Base Price:** ${quotation_details['base_price']:,.2f}\n"
+        f"**Final Price:** ${quotation_details['final_price']:,.2f}\n"
+        f"**Terms:** {quotation_details['terms']}\n"
+        f"**Delivery:** {quotation_details['delivery']}\n"
+        f"**Validity:** {quotation_details['validity']}\n"
     )
-    
     if quotation_details["special_notes"]:
-        summary += "\nSpecial Notes:\n" + "\n".join(f"- {note}" for note in quotation_details["special_notes"])
+        summary += "\n**Special Notes:**\n" + "\n".join(f"- {note}" for note in quotation_details["special_notes"])
     
     return {
-        "quotation": quotation_details,
-        "summary": summary
+        "summary": summary,
+        "topic": "Quotation Generation",
+        "tools_used": ["quotation"],
+        "source": []
     }
 
 quotation = Tool(
@@ -365,24 +385,21 @@ def pipeline_manager_tool(deal_status: Dict[str, Any]) -> Dict[str, Any]:
             next_actions.append(f"Prepare for {next_stage.replace('_', ' ').title()} stage")
     
     summary = (
-        f"Pipeline Status Update:\n"
-        f"Current Stage: {current_stage.replace('_', ' ').title()}\n"
-        f"Risk Assessment:\n"
-        f"- Risk Score: {risk_assessment['risk_score']}\n"
-        f"- Status: {'At Risk' if risk_assessment['is_at_risk'] else 'Healthy'}\n"
+        f"### Pipeline Status Update\n"
+        f"**Current Stage:** {current_stage.replace('_', ' ').title()}\n"
+        f"**Risk Score:** {risk_assessment['risk_score']}\n"
+        f"**Status:** {'At Risk' if risk_assessment['is_at_risk'] else 'Healthy'}\n"
     )
-    
     if risk_assessment["risk_reasons"]:
-        summary += "Risk Factors:\n" + "\n".join(f"- {reason}" for reason in risk_assessment["risk_reasons"]) + "\n"
-    
+        summary += "**Risk Factors:**\n" + "\n".join(f"- {reason}" for reason in risk_assessment["risk_reasons"]) + "\n"
     if next_actions:
-        summary += "\nRecommended Actions:\n" + "\n".join(f"- {action}" for action in next_actions)
+        summary += "\n**Recommended Actions:**\n" + "\n".join(f"- {action}" for action in next_actions)
     
     return {
-        "stage": current_stage,
-        "risk_assessment": risk_assessment,
-        "next_actions": next_actions,
-        "summary": summary
+        "summary": summary,
+        "topic": "Pipeline Analysis",
+        "tools_used": ["pipeline_manager"],
+        "source": []
     }
 
 pipeline_manager = Tool(
@@ -418,7 +435,7 @@ def analyze_deal_patterns(deals: List[Dict[str, Any]]) -> Dict[str, Any]:
         "high_value_factors": win_patterns["high_value"]["key_factors"]
     }
 
-def sales_coach_tool(input_data: Any) -> Dict[str, str]:
+def sales_coach_tool(input_data: Any) -> Dict[str, Any]:
     """Enhanced sales coaching system with pattern analysis and targeted recommendations."""
     coaching_rules = Config.SALES_COACHING
     
@@ -427,34 +444,53 @@ def sales_coach_tool(input_data: Any) -> Dict[str, str]:
         for reason, tips in coaching_rules["lost_reasons"].items():
             if reason in input_data.lower():
                 summary = (
-                    f"Coaching Tips for {reason.capitalize()} Challenge:\n"
+                    f"### Coaching Tips for {reason.capitalize()} Challenge\n"
                     + "\n".join(f"- {tip}" for tip in tips)
                 )
-                return {"summary": summary}
-        return {"summary": "Tip: Focus on understanding customer needs and pain points."}
+                return {
+                    "summary": summary,
+                    "topic": "Sales Coaching",
+                    "tools_used": ["sales_coach"],
+                    "source": []
+                }
+        return {
+            "summary": "Tip: Focus on understanding customer needs and pain points.",
+            "topic": "Sales Coaching",
+            "tools_used": ["sales_coach"],
+            "source": []
+        }
     
     if isinstance(input_data, list) and input_data:
         # Analyze deal patterns
         patterns = analyze_deal_patterns(input_data)
         
-        summary = "Sales Pattern Analysis:\n"
+        summary = "### Sales Pattern Analysis\n"
         if patterns["quick_wins"] > 0:
             summary += (
-                f"\nQuick Win Patterns ({patterns['quick_wins']} deals):\n"
+                f"\n**Quick Win Patterns** ({patterns['quick_wins']} deals):\n"
                 "Key Success Factors:\n"
                 + "\n".join(f"- {factor.replace('_', ' ').title()}" for factor in patterns["quick_win_factors"])
             )
         
         if patterns["high_value_wins"] > 0:
             summary += (
-                f"\nHigh Value Win Patterns ({patterns['high_value_wins']} deals):\n"
+                f"\n**High Value Win Patterns** ({patterns['high_value_wins']} deals):\n"
                 "Key Success Factors:\n"
                 + "\n".join(f"- {factor.replace('_', ' ').title()}" for factor in patterns["high_value_factors"])
             )
-        
-        return {"summary": summary}
+        return {
+            "summary": summary,
+            "topic": "Sales Coaching",
+            "tools_used": ["sales_coach"],
+            "source": []
+        }
     
-    return {"summary": "Please provide more specific deal information for targeted coaching."}
+    return {
+        "summary": "Please provide more specific deal information for targeted coaching.",
+        "topic": "Sales Coaching",
+        "tools_used": ["sales_coach"],
+        "source": []
+    }
 
 sales_coach = Tool(
     name="sales_coach",

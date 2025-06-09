@@ -8,16 +8,19 @@ from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser, StrOutputParser
 from langchain.agents import create_tool_calling_agent, AgentExecutor
 from tools import search_tool, wiki_tool, save_tool, lead_qualifier, followup, quotation, pipeline_manager, sales_coach
+from typing import List
+import json
+import re
 
 tools = [search_tool, wiki_tool, save_tool, lead_qualifier, followup, quotation, pipeline_manager, sales_coach]
 
 load_dotenv()
 
 class Response(BaseModel):
-  topic : str
-  summary : str
-  source : list [str]
-  tools_used : list [str]
+    topic: str
+    summary: str
+    source: List[str]
+    tools_used: List[str]
 
 #llm2 = ChatOpenAI(model = "gpt-40-min")
 #llm = ChatAnthropic(model="claude-3-5-sonnet-20241022")
@@ -62,6 +65,41 @@ agent = create_tool_calling_agent(
   tools=tools
 )
 
+def clean_json_output(output_str):
+    # Remove Markdown code block if present
+    output_str = re.sub(r"^```(?:json)?\s*([\s\S]*?)\s*```$", r"\1", output_str.strip(), flags=re.MULTILINE)
+    # Replace single quotes with double quotes (be careful: this is naive)
+    if output_str and output_str[0] in ["'", "{"] and "'" in output_str:
+        output_str = output_str.replace("'", '"')
+    return output_str
+
+def ensure_response_schema(output_str):
+    """
+    Ensures the output string is a JSON object with all required fields for the Response schema.
+    If fields are missing, fills them with sensible defaults.
+    """
+    try:
+        data = json.loads(output_str)
+        if not isinstance(data, dict):
+            raise ValueError("Output is not a dict")
+    except Exception:
+        # If not valid JSON, treat the whole output as summary
+        data = {}
+
+    # Fill missing fields with defaults
+    data.setdefault("topic", "General")
+    data.setdefault("summary", output_str if "summary" not in data else data["summary"])
+    data.setdefault("source", [])
+    data.setdefault("tools_used", [])
+
+    # Ensure correct types
+    if not isinstance(data["source"], list):
+        data["source"] = [str(data["source"])]
+    if not isinstance(data["tools_used"], list):
+        data["tools_used"] = [str(data["tools_used"])]
+
+    return json.dumps(data)
+
 if __name__ == "__main__":
     i = -1
     while i < 0:
@@ -75,6 +113,11 @@ if __name__ == "__main__":
                 output_str = output_str.strip("`")
                 if output_str.startswith("json"):
                     output_str = output_str[4:].strip()
+
+            # Clean and ensure output matches schema
+            output_str = clean_json_output(output_str)
+            output_str = ensure_response_schema(output_str)
+
             structured_response = parser.parse(output_str)
 
             # Professional formatted output with clear sections

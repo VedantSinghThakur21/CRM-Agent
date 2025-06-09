@@ -408,16 +408,16 @@
                 </div>
 
                 <div class="quick-actions">
-                    <div class="quick-action" onclick="useQuickAction('Qualify a new lead with deal size $50000, high urgency, positive past behavior')">
+                    <div class="quick-action" onclick='useQuickAction("Qualify a new lead with deal size $50000, high urgency, positive past behavior")'>
                         Quick Lead Scoring
                     </div>
-                    <div class="quick-action" onclick="useQuickAction('Generate follow-up for site visit with customer John Smith')">
+                    <div class="quick-action" onclick='useQuickAction("Generate follow-up for site visit with customer John Smith. Lead context: { \"name\": \"John Smith\", \"custom_message\": \"Thank you for your time during the site visit. Please let us know if you have any further questions.\" }, last interaction: \"site visit completed\"")'>
                         Site Visit Follow-up
                     </div>
-                    <div class="quick-action" onclick="useQuickAction('Create quotation for VIP customer, deal size $25000, high urgency')">
+                    <div class="quick-action" onclick='useQuickAction("Create quotation for VIP customer. Deal context: { \"customer_type\": \"VIP\", \"deal_size\": 25000, \"urgency\": \"high\" }")'>
                         VIP Quotation
                     </div>
-                    <div class="quick-action" onclick="useQuickAction('Analyze pipeline for deal in negotiation stage, 10 days inactive')">
+                    <div class="quick-action" onclick='useQuickAction("Analyze pipeline for deal. Deal status: { \"stage\": \"negotiation\", \"inactive_days\": 10, \"price_sensitivity\": \"medium\", \"deal_size\": 25000 }")'>
                         Pipeline Analysis
                     </div>
                 </div>
@@ -440,6 +440,8 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.8/dist/purify.min.js"></script>
     <script>
         let isLoading = false;
 
@@ -497,7 +499,7 @@
                     resultContent = `
                         <div class="result-card">
                             <div class="result-title">📌 ${resultData.topic}</div>
-                            <div class="result-content">${resultData.summary.replace(/\n/g, '<br>')}</div>
+                            <div class="result-content">${DOMPurify.sanitize(marked.parse(resultData.summary))}</div>
                         </div>
                         ${resultData.tools_used.length > 0 ? `
                         <div class="result-card" style="margin-top: 10px; border-left-color: #27ae60;">
